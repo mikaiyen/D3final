@@ -6,6 +6,7 @@ d3.csv("data/test.csv").then(
 
 function ready(rawdata){
     data=preprocess(rawdata);
+    console.log(data);
     btninit(data);
     btnclick(data);
 }
@@ -51,22 +52,27 @@ function btnclick(data){
 
 
     // 設定按鈕點擊事件處理函式
-    d3.select("#countryBtn").on("click", click);
-
-    function click() {
+    d3.select("#countryBtn").on("click", function() {
         // 獲取選中的國家名稱
         var selectedCountry = d3.select("#countrySelect").property("value");
 
+        console.log(selectedCountry)
 
         // 根據選中的國家過濾資料
         var filteredData = data.filter(function(d) {
             return d.Country_Name === selectedCountry;
         });
 
+        console.log(filteredData)
+ 
+        // var numdata = Object.keys(filteredData);
+        // console.log(numdata)
+
         // 更新圓餅圖資料
         var pie = d3.pie()
             .value((d) => { return d.values }).sort(null);
             
+        console.log("Children",filteredData[0].Children)
 
         var newdata = [
             { "values": filteredData[0].Children, "property": "Children" },
@@ -76,14 +82,15 @@ function btnclick(data){
         ]
 
         var dataReady = pie(newdata);
+ 
+        console.log(dataReady)
 
-        // 移除之前的圓餅圖和文字
+        // 移除之前的圓餅圖
         svg.selectAll('path').remove();
-        svg.selectAll('text').remove();
 
         // 建立弧形生成器
         var arcGenerator = d3.arc()
-            .innerRadius(radius/5)
+            .innerRadius(0)
             .outerRadius(radius);
     
     
@@ -96,9 +103,6 @@ function btnclick(data){
         .attr('fill', function(d, i) { return colors[i]; })
         .attr("stroke", "white")
         .style("stroke-width", "2px")
-        .on("mouseover", handleMouseOver) // 新增滑鼠移入事件處理器
-        .on("mouseout", handleMouseOut) // 新增滑鼠移出事件處理器
-        .on("mousemove", mousemove)
         .each(function(d) {
             var centroid = arcGenerator.centroid(d);
             svg.append("text")
@@ -106,7 +110,7 @@ function btnclick(data){
                 .attr("x", centroid[0])
                 .attr("y", centroid[1])
                 .text(function() {
-                    return d.data.property+': \r'+Math.floor((d.data.values*100))+"%"; //Math.floor()是因為有時候資料的小數點不知為啥會爆開
+                    return d.data.property+': \r'+(d.data.values*100)+"%";
                 });
         })
         .transition()
@@ -121,48 +125,54 @@ function btnclick(data){
             };
         });
 
-        //interactive 互動處理
-        const tip = d3.select('.tooltip');
-
-
-        // 滑鼠移入事件處理器
-        function handleMouseOver(e) {
-            const thisSliceData = d3.select(this).data()[0].data
-            // console.log("Mouse over:", thisSliceData); // 在控制台中顯示相應的屬性
-            
-            tip.style('left',(e.clientX+15)+'px')
-            .style('top',e.clientY+'px') 
-            .style('opacity',0.98) 
-
-            tip.select('h3').html(`${thisSliceData.property}`); 
-            tip.select('h4').html(`${Math.floor((thisSliceData.values)*100)+"%"}`);
-
-        
-        }
-
-        function mousemove(e){ 
-            tip.style('left',(e.clientX+15)+'px')
-                .style('top',e.clientY+'px')
-                .style('opacity',0.98)
-        }
-
-        // 滑鼠移出事件處理器
-        function handleMouseOut(d, i) {
-            tip.style('opacity',0)
-        }
-
 
         //顯示國家資料
         document.getElementById("country_name").innerHTML = selectedCountry;
 
-        console.log(filteredData);
+        document.getElementById("Children").innerHTML   = "Children (aged 0-14) : " + filteredData[0].Children*100  + "%";
+        document.getElementById("Youth").innerHTML      = "Youth    (aged 15-24): " + filteredData[0].Youth*100     + "%";
+        document.getElementById("Adult").innerHTML      = "Adult    (aged 25-64): " + filteredData[0].Adult*100     + "%";
+        document.getElementById("Elderly").innerHTML    = "Elderly  (aged 65+)  : " + filteredData[0].Elderly*100   + "%";
+    });
 
+    //interactive 互動處理
+    const tip = d3.select('.tooltip');
 
-        document.getElementById("Children").innerHTML   = "Children (aged 0-14) : " + Math.floor(filteredData[0].Children*100)  + "%";
-        document.getElementById("Youth").innerHTML      = "Youth    (aged 15-24): " + Math.floor(filteredData[0].Youth*100)     + "%";
-        document.getElementById("Adult").innerHTML      = "Adult    (aged 25-64): " + Math.floor(filteredData[0].Adult*100)     + "%";
-        document.getElementById("Elderly").innerHTML    = "Elderly  (aged 65+)  : " + Math.floor(filteredData[0].Elderly*100)   + "%";
+    function mouseover(e){ 
+        //get data
+        const thissliceData = d3.select(this); 
+        console.log(thissliceData)
+        const bodyData = [
+            ['Budget', thissliceData.values]
+        ];
+
+        tip.style('left',(e.clientX+15)+'px')
+            .style('top',e.clientY+'px') 
+            .style('opacity',0.98) 
+
+        tip.select('h3').html(`${thissliceData.title}, ${thissliceData.release_year}`); 
+        tip.select('h4').html(`${thissliceData.tagline}, ${thissliceData.runtime} min.`);
+
+        d3.select('.tip-body').selectAll('p').data(bodyData) 
+        .join('p').attr('class', 'tip-info') 
+        .html(d=>`${d[0]} : ${d[1]}`);
     }
+
+    function mousemove(e){ 
+        tip.style('left',(e.clientX+15)+'px')
+            .style('top',e.clientY+'px')
+            .style('opacity',0.98)
+    }
+
+    function mouseout(e){
+        tip.style('opacity',0)
+    }
+
+    //interactive 新增監聽
+    d3.selectAll('.pie')
+        .on('mouseover',mouseover)
+        .on('mousemove',mousemove) 
+        .on('mouseout',mouseout);
 
 }
 
